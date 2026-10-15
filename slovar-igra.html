@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Словарь и игра — Guli Rus tili</title>
+<style>
+  :root {
+    --purple: #7c3aed; --purple-dark: #5b21b6; --purple-light: #f3ecfd;
+    --bg: #faf8ff; --text: #201533; --gray: #6b6478; --green: #15803d; --red: #b91c1c;
+    --border: #e6ddf5; --gold: #d97706;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); line-height:1.5; min-height:100vh; }
+  header { background: linear-gradient(135deg, var(--purple), var(--purple-dark)); color: white; padding: 20px 18px 24px; text-align:center; }
+  header h1 { margin: 4px 0 0; font-size: 1.3rem; }
+  header p { margin:0; font-size:0.85rem; opacity:0.9; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* lesson picker */
+  .lesson-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+  .lesson-btn { background:white; border:2px solid var(--border); border-radius:12px; padding: 16px 6px; text-align:center; cursor:pointer; font-weight:700; color: var(--purple-dark); font-size:1.05rem; }
+  .lesson-btn:active, .lesson-btn.selected { border-color: var(--purple); background: var(--purple-light); }
+  .lesson-btn .count { display:block; font-size:0.7rem; font-weight:400; color: var(--gray); margin-top:2px; }
+  .start-btn { width:100%; margin-top:20px; padding:14px; background:var(--purple); color:white; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; }
+  .start-btn:hover { background: var(--purple-dark); }
+  .mode-row { display:flex; gap:10px; margin-top:16px; }
+  .mode-btn { flex:1; padding:10px; border-radius:10px; border:2px solid var(--border); background:white; font-weight:600; color:var(--gray); cursor:pointer; font-size:0.85rem; }
+  .mode-btn.selected { border-color:var(--purple); color:var(--purple-dark); background:var(--purple-light); }
+  .section-label { font-size:0.85rem; color:var(--gray); margin: 18px 0 4px; font-weight:600; }
+
+  /* quiz card */
+  .quiz-card { display:none; }
+  .quiz-card.active { display:block; }
+  .progress-row { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+  .progress-bar { flex:1; height:8px; background:var(--purple-light); border-radius:4px; overflow:hidden; }
+  .progress-fill { height:100%; background:var(--purple); width:0%; transition:width .3s; }
+  .progress-count { font-size:0.8rem; color:var(--gray); white-space:nowrap; }
+  .score-badge { font-size:0.8rem; color:var(--green); font-weight:700; white-space:nowrap; }
+  .word-card { background:white; border-radius:16px; padding: 30px 20px; text-align:center; box-shadow: 0 4px 16px rgba(124,58,237,0.1); margin-bottom: 18px; }
+  .word-lang { font-size:0.75rem; color:var(--gray); text-transform:uppercase; letter-spacing:0.05em; }
+  .word-main { font-size: 1.9rem; font-weight:800; color:var(--purple-dark); margin: 6px 0 0; }
+  .options { display:grid; gap: 10px; }
+  .opt-btn { padding: 14px 12px; border-radius: 10px; border:2px solid var(--border); background:white; font-size:1rem; cursor:pointer; text-align:left; }
+  .opt-btn.correct { border-color: var(--green); background:#f0fdf4; color:var(--green); font-weight:700; }
+  .opt-btn.wrong { border-color: var(--red); background:#fef2f2; color:var(--red); font-weight:700; }
+  .opt-btn:disabled { cursor:default; }
+  .next-btn { width:100%; margin-top:16px; padding:13px; background:var(--purple); color:white; border:none; border-radius:10px; font-weight:700; font-size:0.95rem; cursor:pointer; display:none; }
+  .next-btn.show { display:block; }
+
+  /* result */
+  .result-card { display:none; text-align:center; }
+  .result-card.active { display:block; }
+  .result-emoji { font-size: 3rem; }
+  .result-score { font-size: 2.2rem; font-weight:800; color:var(--purple-dark); margin: 6px 0; }
+  .result-label { color:var(--gray); margin-bottom: 20px; }
+  .mistakes-list { text-align:left; background:white; border-radius:12px; padding:14px 16px; margin-bottom:18px; }
+  .mistakes-list h3 { font-size:0.9rem; margin:0 0 8px; color:var(--purple-dark); }
+  .mistake-item { font-size:0.88rem; padding:6px 0; border-bottom:1px solid var(--border); }
+  .mistake-item:last-child { border-bottom:none; }
+  .mistake-item b { color: var(--red); }
+  .retry-btn, .back-btn { width:100%; padding:13px; border-radius:10px; font-weight:700; font-size:0.95rem; cursor:pointer; margin-bottom:10px; }
+  .retry-btn { background:var(--purple); color:white; border:none; }
+  .back-btn { background:white; color:var(--purple-dark); border:2px solid var(--purple-light); }
+
+  .word-card { position:relative; }
+  .speak-btn { position:absolute; top:10px; right:10px; width:44px; height:44px; border-radius:50%; border:2px solid var(--border); background:var(--purple-light); font-size:1.25rem; cursor:pointer; line-height:1; }
+  .speak-btn:active { background:var(--purple); }
+  .speak-btn[hidden], .toggle-row[hidden] { display:none; }
+  .toggle-row { display:flex; align-items:center; gap:10px; margin-top:18px; font-size:0.9rem; color:var(--text); cursor:pointer; }
+  .toggle-row input { width:20px; height:20px; accent-color: var(--purple); }
+  .mini-speak { border:none; background:none; cursor:pointer; font-size:1rem; padding:0 4px; }
+  #setup-card.hidden, .quiz-card.hidden, .result-card.hidden { display:none !important; }
+  footer { text-align:center; color:var(--gray); font-size:0.75rem; padding:10px 20px 30px; }
+
+
+  .top { position:sticky; top:0; background:var(--bg); padding:8px 0 10px; z-index:2; }
+  #q { width:100%; padding:12px 14px; border:2px solid var(--border); border-radius:10px; font-size:1rem; background:#fff; }
+  #q:focus { outline:none; border-color:var(--purple); }
+  .chips { display:flex; gap:8px; overflow-x:auto; padding:10px 0 2px; }
+  .chip { flex:none; padding:8px 14px; border-radius:20px; border:2px solid var(--border); background:#fff; font-weight:700; color:var(--purple-dark); font-size:.85rem; cursor:pointer; }
+  .chip.sel { border-color:var(--purple); background:var(--purple-light); }
+  .info { font-size:.8rem; color:var(--gray); margin:8px 2px; }
+  .row { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+  .words { flex:1; min-width:0; }
+  .ru { font-weight:800; color:var(--purple-dark); font-size:1.05rem; }
+  .uz { color:var(--text); font-size:.95rem; }
+  .spk { flex:none; width:42px; height:42px; border-radius:50%; border:2px solid var(--border); background:var(--purple-light); font-size:1.15rem; cursor:pointer; }
+  .spk:active, .spk.on { background:var(--purple); }
+  .empty { text-align:center; color:var(--gray); padding:30px 0; }
+  .note { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:10px; padding:10px 12px; font-size:.82rem; margin-bottom:10px; }
+
+  .tabs { display:flex; max-width:560px; margin:0 auto; padding:12px 16px 0; gap:10px; }
+  .tab { flex:1; padding:11px; border-radius:10px; border:2px solid var(--border); background:#fff; font-weight:700; color:var(--gray); font-size:.95rem; cursor:pointer; }
+  .tab.sel { border-color:var(--purple); background:var(--purple-light); color:var(--purple-dark); }
+  [hidden] { display:none !important; }
+  .name-row { margin:6px 0 0; }
+  #student-name { width:100%; padding:13px 14px; border:2px solid var(--border); border-radius:10px; font-size:1rem; background:#fff; }
+  #student-name:focus { outline:none; border-color:var(--purple); }
+  .result-points { font-size:1.05rem; font-weight:700; color:var(--gold); margin:-8px 0 16px; }
+  .send-btn { width:100%; padding:13px; border-radius:10px; font-weight:700; font-size:.95rem; cursor:pointer; margin-bottom:10px; background:#0d9488; color:#fff; border:none; }
+  #send-fallback { text-align:left; background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px; font-size:.85rem; }
+  #send-fallback textarea { width:100%; height:130px; border:1px solid var(--border); border-radius:8px; padding:8px; font-size:.8rem; font-family:inherit; margin:8px 0; }
+  #send-fallback a { display:inline-block; margin:4px 8px 4px 0; padding:9px 14px; border-radius:8px; background:var(--purple-light); color:var(--purple-dark); font-weight:700; text-decoration:none; }
+  #streak-msg { text-align:center; color:var(--gold); font-weight:700; margin-top:12px; min-height:1px; }
+  .res-box { background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:12px; overflow-x:auto; }
+  .res-box h3 { margin:0 0 8px; font-size:.95rem; color:var(--purple-dark); }
+  table.res { width:100%; border-collapse:collapse; font-size:.82rem; }
+  table.res th { text-align:left; color:var(--gray); font-weight:600; padding:4px 6px; border-bottom:2px solid var(--border); }
+  table.res td { padding:6px; border-bottom:1px solid var(--border); }
+  .res-actions { display:flex; gap:10px; margin-top:8px; }
+  .res-actions button { flex:1; padding:11px; border-radius:10px; font-weight:700; font-size:.85rem; cursor:pointer; border:2px solid var(--border); background:#fff; color:var(--purple-dark); }
+  .res-actions .danger { color:var(--red); }
+  .tab { font-size:.85rem; padding:11px 6px; }
+  .mode-btn { font-size:.8rem; padding:10px 6px; }
+  #write-input { width:100%; padding:14px; border:2px solid var(--border); border-radius:10px; font-size:1.1rem; background:#fff; }
+  #write-input:focus { outline:none; border-color:var(--purple); }
+  #write-input:disabled { background:#f6f2fd; }
+  .write-btns { display:flex; gap:10px; margin-top:12px; }
+  .check-btn, .skip-btn { padding:13px; border-radius:10px; font-weight:700; font-size:.95rem; cursor:pointer; }
+  .check-btn { flex:2; background:var(--purple); color:#fff; border:none; }
+  .skip-btn { flex:1; background:#fff; color:var(--gray); border:2px solid var(--border); }
+  .fb { margin-top:14px; padding:12px 14px; border-radius:10px; font-size:1rem; }
+  .fb.ok { background:#f0fdf4; color:var(--green); border:2px solid var(--green); font-weight:700; }
+  .fb.bad { background:#fef2f2; color:var(--red); border:2px solid var(--red); }
+  .fb.bad b { color:var(--text); }
+  .play-lesson { display:block; width:100%; margin-top:14px; padding:13px; background:var(--purple); color:#fff; border:none; border-radius:10px; font-weight:700; font-size:.95rem; cursor:pointer; }
+  .top { top:0; }
+</style>
+</head>
+<body>
+<header>
+  <p>Guli | Rus tili — Книга 1</p>
+  <h1>📖 Словарь и игра</h1>
+</header>
+<div class="tabs">
+  <button class="tab sel" data-tab="dict">📖 Словарь</button>
+  <button class="tab" data-tab="game">🎮 Игра</button>
+  <button class="tab" data-tab="results">🏆 Результаты</button>
+</div>
+<div class="wrap" id="view-dict">
+  <div class="note" id="dnote" hidden>На этом устройстве нет русского голоса, поэтому кнопки 🔊 скрыты.</div>
+  <div class="top">
+    <input id="q" type="search" placeholder="Поиск: слово по-русски или по-узбекски" autocomplete="off">
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="info" id="info"></div>
+  <div id="list"></div>
+  <button class="play-lesson" id="play-lesson" hidden>🎮 Играть по этому уроку</button>
+</div>
+<div class="wrap" id="view-game" hidden>
+
+  <div id="setup-card">
+    <div class="section-label">Как тебя зовут?</div>
+    <div class="name-row"><input id="student-name" type="text" maxlength="40" autocomplete="name" placeholder="Имя и фамилия"></div>
+
+    <div class="section-label">Выбери урок</div>
+    <div class="lesson-grid" id="lesson-grid"></div>
+
+    <div class="section-label">Режим</div>
+    <div class="mode-row">
+      <button class="mode-btn selected" data-mode="ru-uz">RU → UZ</button>
+      <button class="mode-btn" data-mode="uz-ru">UZ → RU</button>
+      <button class="mode-btn" data-mode="write">✍️ Письменно</button>
+    </div>
+
+    <label class="toggle-row" id="audio-row" hidden><input type="checkbox" id="audio-toggle" checked> 🔊 Озвучивать русские слова</label>
+
+    <button class="start-btn" id="start-btn">Начать игру</button>
+  </div>
+
+  <div class="quiz-card" id="quiz-card">
+    <div class="progress-row">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-count" id="progress-count">1/10</div>
+      <div class="score-badge" id="score-badge">✓ 0</div>
+    </div>
+    <div class="word-card">
+      <button class="speak-btn" id="speak-btn" title="Послушать" aria-label="Послушать" hidden>🔊</button>
+      <div class="word-lang" id="word-lang">Русский</div>
+      <div class="word-main" id="word-main">слово</div>
+    </div>
+    <div class="options" id="options"></div>
+    <div id="streak-msg"></div>
+    <div id="write-area" hidden>
+      <input id="write-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Напиши перевод по-русски…">
+      <div class="write-btns">
+        <button class="skip-btn" id="skip-btn" type="button">Не знаю</button>
+        <button class="check-btn" id="check-btn" type="button">Проверить</button>
+      </div>
+      <div id="write-feedback"></div>
+    </div>
+    <button class="next-btn" id="next-btn">Следующее слово →</button>
+  </div>
+
+  <div class="result-card" id="result-card">
+    <div class="result-emoji" id="result-emoji">🎉</div>
+    <div class="result-score" id="result-score">8/10</div>
+    <div class="result-label" id="result-label">Отличный результат!</div>
+    <div class="result-points" id="result-points"></div>
+    <div class="mistakes-list" id="mistakes-list" style="display:none;">
+      <h3>Слова для повторения:</h3>
+      <div id="mistakes-body"></div>
+    </div>
+    <button class="send-btn" id="send-btn">📨 Отправить учителю</button>
+    <div id="send-fallback" hidden>
+      <div>Результат скопирован. Отправь его учителю:</div>
+      <a id="send-tg" target="_blank" rel="noopener">Telegram</a><a id="send-wa" target="_blank" rel="noopener">WhatsApp</a>
+      <textarea id="send-text" readonly></textarea>
+    </div>
+    <button class="retry-btn" id="retry-btn">Играть ещё раз</button>
+    <button class="back-btn" id="back-btn">Выбрать другой урок</button>
+  </div>
+
+</div>
+<div class="wrap" id="view-results" hidden>
+  <div class="res-box"><h3>Ученики (на этом устройстве)</h3><div id="res-students"></div></div>
+  <div class="res-box"><h3>Все попытки</h3><div id="res-attempts"></div></div>
+  <div class="res-actions"><button id="res-copy">📋 Скопировать всё</button><button id="res-clear" class="danger">🗑 Очистить</button></div>
+</div>
+<footer>Guli | Rus tili — результаты хранятся на этом устройстве; учителю они отправляются кнопкой</footer>
+<script>
+const VOCAB = {"1":[["я","men"],["ты","sen"],["он","u (erkak)"],["она","u (ayol)"],["оно","u (jonsiz)"],["мы","biz"],["вы","siz"],["они","ular"],["сегодня","bugun"],["завтра","ertaga"],["вчера","kecha"],["утро","ertalab / tong"],["день","kun"],["вечер","kech / oqshom"],["ночь","tun"],["неделя","hafta"],["месяц","oy"],["год","yil"],["бабушка","buvi"],["дедушка","buva"],["жена","xotin / rafiqa"],["муж","er / turmush o'rtoq"],["сын","o'g'il"],["дочь","qiz"],["гость","mehmon"],["сосед","qo'shni (erkak)"],["соседка","qo'shni (ayol)"],["малыш","chaqaloq / bola"],["комната","xona"],["кровать","krovat"],["подушка","yostiq"],["одеяло","ko'rpa / adyol"],["полка","tokcha"],["ковёр","gilam"],["зеркало","oyna (ko'zgu)"],["свеча","sham"],["ключ","kalit"],["крыша","tom"],["лампа","lampa"],["балкон","balkon"],["небо","osmon"],["солнце","quyosh"],["луна","oy"],["звезда","yulduz"],["гора","tog'"],["река","daryo"],["озеро","ko'l"],["лес","o'rmon"],["дерево","daraxt"],["цветок","gul"],["улица","ko'cha"],["площадь","maydon"],["магазин","do'kon"],["рынок","bozor"],["аптека","dorixona"],["остановка","bekat"],["светофор","svetofor"],["дорога","yo'l"],["мост","ko'prik"],["парк","park"],["чайник","choynak"],["кастрюля","qozon / kastryulka"],["сковорода","tova"],["полотенце","sochiq"],["посуда","idish-tovoq"],["завтрак","nonushta"],["обед","tushlik"],["ужин","kechki ovqat"],["тарелка","likopcha"],["ложка","qoshiq"],["жара","jazirama / issiqlik"],["холод","sovuq"],["туман","tuman"],["гроза","chaqmoqli bo'ron"],["буря","bo'ron"],["тепло","iliqlik"],["прохлада","salqinlik"],["облако","bulut"],["гром","momaqaldiroq"],["радуга","kamalak"],["деньги","pul"],["время","vaqt"],["работа","ish"],["отдых","dam olish"],["праздник","bayram"],["подарок","sovg'a"],["письмо","xat"],["звонок","qo'ng'iroq"],["новость","yangilik"],["встреча","uchrashuv"],["радость","quvonch"],["грусть","g'am / xafalik"],["страх","qo'rquv"],["злость","g'azab"],["усталость","charchoq"],["скука","zerikish"],["любовь","sevgi / muhabbat"],["дружба","do'stlik"],["счастье","baxt"],["удивление","hayrat / ajablanish"]],"2":[["голова","bosh"],["глаз","ko'z"],["ухо","quloq"],["нос","burun"],["рот","og'iz"],["зуб","tish"],["шея","bo'yin"],["плечо","yelka"],["палец","barmoq"],["спина","orqa"],["рубашка","ko'ylak"],["брюки","shim"],["шапка","qalpoq"],["перчатки","qo'lqop"],["носки","paypoq"],["платок","ro'mol"],["пояс","kamar"],["карман","cho'ntak"],["пуговица","tugma"],["воротник","yoqa"],["учитель","o'qituvchi"],["врач","shifokor"],["инженер","muhandis"],["строитель","quruvchi"],["продавец","sotuvchi"],["повар","oshpaz"],["водитель","haydovchi"],["пожарный","o't o'chiruvchi"],["пастух","cho'pon"],["портной","tikuvchi"],["спасибо","rahmat"],["пожалуйста","marhamat"],["извините","kechirasiz"],["простите","uzr"],["здравствуйте","assalomu alaykum"],["привет","salom"],["пока","xayr"],["до свидания","ko'rishguncha"],["добро пожаловать","xush kelibsiz"],["не за что","arzimaydi"],["школа","maktab"],["карандаш","qalam"],["доска","doska"],["тетрадь","daftar"],["учебник","darslik"],["линейка","chizg'ich"],["ластик","o'chirg'ich"],["класс","sinf"],["урок","dars"],["экзамен","imtihon"],["мясо","go'sht"],["рыба","baliq"],["яйцо","tuxum"],["масло","sariyog' / moy"],["сыр","pishloq"],["мёд","asal"],["лук","piyoz"],["чеснок","sarimsoq"],["морковь","sabzi"],["капуста","karam"],["болезнь","kasallik"],["температура","harorat"],["кашель","yo'tal"],["простуда","shamollash"],["боль","og'riq"],["лекарство","dori"],["укол","ukol"],["больница","kasalxona"],["градусник","termometr"],["рецепт","retsept"],["цена","narx"],["скидка","chegirma"],["чек","chek"],["касса","kassa"],["очередь","navbat"],["покупка","xarid"],["продажа","sotuv"],["товар","mahsulot"],["сумка","sumka"],["кошелёк","hamyon"],["кухня","oshxona"],["ванная","hammom"],["туалет","hojatxona"],["коридор","dahliz"],["лестница","zinapoya"],["подвал","yer osti xona"],["занавеска","parda"],["розетка","rozetka"],["выключатель","o'chirgich"],["замок","qulf"],["тесть","qaynota (xotin tomonidan)"],["тёща","qaynona (xotin tomonidan)"],["свёкор","qaynota (er tomonidan)"],["свекровь","qaynona (er tomonidan)"],["зять","kuyov"],["невестка","kelin"],["племянник","jiyan (o'g'il)"],["племянница","jiyan (qiz)"],["внук","nabira (o'g'il)"],["внучка","nabira (qiz)"]],"3":[["мама","oyi / ona"],["папа","dada / ota"],["брат","aka / uka"],["сестра","opa / singil"],["ребёнок","bola"],["друг","do'st"],["подруга","qiz do'st"],["человек","odam / inson"],["мальчик","o'g'il bola"],["девочка","qiz bola"],["рука","qo'l"],["нога","oyoq"],["живот","qorin"],["сердце","yurak"],["кожа","teri"],["волосы","soch"],["лицо","yuz"],["лоб","peshona"],["борода","soqol"],["ноготь","tirnoq"],["дверь","eshik"],["окно","deraza"],["стена","devor"],["потолок","shift"],["порог","ostona"],["забор","to'siq"],["крыльцо","ayvon"],["терраса","teras / ayvon"],["труба","quvur"],["этаж","qavat"],["весна","bahor"],["лето","yoz"],["осень","kuz"],["зима","qish"],["минута","daqiqa"],["секунда","soniya"],["час","soat"],["сезон","fasl"],["погода","ob-havo"],["природа","tabiat"],["бумага","qog'oz"],["лист","varaq"],["чернила","siyoh"],["адрес","manzil"],["объявление","e'lon"],["приглашение","taklifnoma"],["запись","yozuv"],["справка","ma'lumotnoma"],["печать","muhr"],["подпись","imzo"],["будьте здоровы","sog' bo'ling"],["приятного аппетита","yoqimli ishtaha"],["с днём рождения","tug'ilgan kuningiz bilan"],["добрый день","xayrli kun"],["добрый вечер","xayrli kech"],["доброе утро","xayrli tong"],["спокойной ночи","xayrli tun"],["будьте добры","marhamat qiling"],["на здоровье","arzimaydi / sog'liq bo'lsin"],["всего доброго","hammasi yaxshi bo'lsin"],["нежность","mehr / nazokat"],["гнев","achchiq / g'azab"],["стыд","uyat"],["гордость","g'urur"],["надежда","umid"],["доверие","ishonch"],["уважение","hurmat"],["зависть","hasad"],["обида","ranjish"],["вина","ayb / gunoh"],["мыло","sovun"],["расчёска","taroq"],["веник","supurgi"],["тряпка","latta"],["утюг","dazmol"],["ножницы","qaychi"],["мусор","axlat"],["шкатулка","sandiqcha"],["корзина","savat"],["мешок","qop"],["фонтан","favvora"],["мечеть","masjid"],["кладбище","qabriston"],["граница","chegara"],["площадка","maydoncha"],["двор","hovli"],["окраина","chekka"],["переулок","tor ko'cha"],["тропинка","so'qmoq"],["перекрёсток","chorraha"],["зарплата","ish haqi"],["отпуск","ta'til"],["договор","shartnoma"],["счёт","hisob"],["расписка","tilxat"],["взнос","badal"],["долг","qarz"],["рассрочка","muddatli to'lov"],["налог","soliq"],["штраф","jarima"]],"4":[["кошка","mushuk"],["собака","it"],["птица","qush"],["мышь","sichqon"],["змея","ilon"],["паук","o'rgimchak"],["пчела","asalari"],["муравей","chumoli"],["бабочка","kapalak"],["лягушка","qurbaqa"],["молоток","bolg'a"],["гвоздь","mix"],["пила","arra"],["топор","bolta"],["верёвка","arqon"],["ведро","chelak"],["лопата","kurak"],["кисть","cho'tka"],["клей","yelim"],["нож","pichoq"],["остров","orol"],["скала","qoya"],["водопад","sharshara"],["пещера","g'or"],["поле","dala"],["холм","tepalik"],["долина","vodiy"],["берег","qirg'oq"],["залив","ko'rfaz"],["полуостров","yarim orol"],["красота","go'zallik"],["сила","kuch"],["слабость","zaiflik"],["правда","haqiqat"],["ложь","yolg'on"],["тишина","sukunat"],["шум","shovqin"],["свобода","erkinlik"],["мир","tinchlik"],["война","urush"],["огурец","bodring"],["перец","qalampir"],["яблоко","olma"],["груша","nok"],["виноград","uzum"],["дыня","qovun"],["орех","yong'oq"],["ягода","mevacha"],["слива","olxo'ri"],["персик","shaftoli"],["Как дела?","Ishlar qalay?"],["Что нового?","Nima gap?"],["Сколько это стоит?","Bu qancha turadi?"],["Который час?","Soat necha?"],["Где находится...?","...qayerda joylashgan?"],["Я не понимаю","Men tushunmayapman"],["Повторите, пожалуйста","Iltimos, takrorlang"],["Говорите медленнее, пожалуйста","Iltimos, sekinroq gapiring"],["Как это называется?","Bu nima deb ataladi?"],["Мне нужно...","Menga ... kerak"],["Я хочу...","Men ... xohlayman"],["Дайте, пожалуйста","Iltimos, bering"],["Покажите, пожалуйста","Iltimos, ko'rsating"],["Помогите, пожалуйста","Iltimos, yordam bering"],["Не знаю","Bilmayman"],["Конечно","Albatta"],["Может быть","Balki"],["Без проблем","Muammo yo'q"],["Как обычно","Har doimgidek"],["Всё в порядке","Hammasi joyida"],["Не важно","Muhim emas"],["Так себе","O'rtacha"],["Ничего страшного","Hechqisi yo'q"],["Очень приятно","Juda xursandman"],["До скорого","Tez orada ko'rishguncha"],["Увидимся","Ko'rishamiz"],["Берегите себя","O'zingizga yaxshi qarang"],["Удачи","Omad"],["Поздравляю","Tabriklayman"],["Желаю успехов","Muvaffaqiyat tilayman"],["Как поживаете?","Qalaysiz?"],["Что случилось?","Nima bo'ldi?"],["В чём дело?","Gap nimada?"],["Подождите, пожалуйста","Iltimos, kuting"],["Одну минуту","Bir daqiqa"],["Я согласен","Men roziman"],["Я не согласен","Men rozi emasman"],["Хорошая идея","Yaxshi fikr"],["Плохая идея","Yomon fikr"],["Мне всё равно","Menga farqi yo'q"],["Договорились","Kelishdik"],["Именно так","Aynan shunday"],["Ни в коем случае","Hech qanday holatda"],["Как скажешь","Qanday desang"],["Без разницы","Farqi yo'q"],["Я тоже","Men ham"],["Я не уверен","Aniq bilmayman"],["Точно","Aniq"],["Вот именно","Xuddi shunday"],["Как всегда","Har doimgidek"]],"5":[["один","bir"],["два","ikki"],["три","uch"],["четыре","to'rt"],["пять","besh"],["шесть","olti"],["семь","yetti"],["восемь","sakkiz"],["девять","to'qqiz"],["десять","o'n"],["одиннадцать","o'n bir"],["двенадцать","o'n ikki"],["тринадцать","o'n uch"],["четырнадцать","o'n to'rt"],["пятнадцать","o'n besh"],["шестнадцать","o'n olti"],["семнадцать","o'n yetti"],["восемнадцать","o'n sakkiz"],["девятнадцать","o'n to'qqiz"],["двадцать","yigirma"],["тридцать","o'ttiz"],["сорок","qirq"],["пятьдесят","ellik"],["шестьдесят","oltmish"],["семьдесят","yetmish"],["восемьдесят","sakson"],["девяносто","to'qson"],["сто","yuz"],["двести","ikki yuz"],["триста","uch yuz"],["четыреста","to'rt yuz"],["пятьсот","besh yuz"],["шестьсот","olti yuz"],["семьсот","yetti yuz"],["восемьсот","sakkiz yuz"],["девятьсот","to'qqiz yuz"],["тысяча","ming"],["две тысячи","ikki ming"],["пять тысяч","besh ming"],["десять тысяч","o'n ming"],["первый","birinchi"],["второй","ikkinchi"],["третий","uchinchi"],["четвёртый","to'rtinchi"],["пятый","beshinchi"],["шестой","oltinchi"],["седьмой","yettinchi"],["восьмой","sakkizinchi"],["девятый","to'qqizinchi"],["десятый","o'ninchi"],["одиннадцатый","o'n birinchi"],["двенадцатый","o'n ikkinchi"],["тринадцатый","o'n uchinchi"],["четырнадцатый","o'n to'rtinchi"],["пятнадцатый","o'n beshinchi"],["шестнадцатый","o'n oltinchi"],["семнадцатый","o'n yettinchi"],["восемнадцатый","o'n sakkizinchi"],["девятнадцатый","o'n to'qqizinchi"],["двадцатый","yigirmanchi"],["двадцать первый","yigirma birinchi"],["тридцатый","o'ttizinchi"],["сороковой","qirqinchi"],["пятидесятый","ellikinchi"],["шестидесятый","oltmishinchi"],["семидесятый","yetmishinchi"],["восьмидесятый","saksoninchi"],["девяностый","to'qsoninchi"],["сотый","yuzinchi"],["сто первый","yuz birinchi"],["двухсотый","ikki yuzinchi"],["трёхсотый","uch yuzinchi"],["четырёхсотый","to'rt yuzinchi"],["пятисотый","besh yuzinchi"],["шестисотый","olti yuzinchi"],["семисотый","yetti yuzinchi"],["восьмисотый","sakkiz yuzinchi"],["девятисотый","to'qqiz yuzinchi"],["тысячный","minginchi"]],"6":[["большой","katta"],["маленький","kichik"],["высокий","baland"],["низкий","past"],["длинный","uzun"],["короткий","qisqa"],["широкий","keng"],["узкий","tor"],["толстый","qalin"],["тонкий","yupqa"],["тяжёлый","og'ir"],["лёгкий","yengil"],["мягкий","yumshoq"],["твёрдый","qattiq"],["гладкий","silliq"],["шероховатый","g'adir-budur"],["гибкий","egiluvchan"],["жёсткий","qattiq"],["крепкий","mustahkam"],["хрупкий","mo'rt"],["горячий","issiq"],["холодный","sovuq"],["тёплый","iliq"],["прохладный","salqin"],["сухой","quruq"],["мокрый","ho'l"],["влажный","nam"],["ледяной","muzdek"],["обжигающий","kuydiruvchi"],["замёрзший","muzlagan"],["новый","yangi"],["старый","eski"],["молодой","yosh"],["пожилой","keksa"],["древний","qadimiy"],["современный","zamonaviy"],["ранний","erta"],["поздний","kech"],["постоянный","doimiy"],["временный","vaqtinchalik"],["красивый","chiroyli"],["некрасивый","xunuk"],["чистый","toza"],["грязный","iflos"],["аккуратный","ozoda"],["небрежный","beparvo"],["яркий","yorqin"],["тусклый","xira"],["светлый","yorug'"],["тёмный","qorong'i"],["добрый","mehribon"],["злой","yovuz"],["умный","aqlli"],["глупый","ahmoq"],["весёлый","quvnoq"],["грустный","g'amgin"],["смелый","jasur"],["трусливый","qo'rqoq"],["честный","halol"],["ленивый","dangasa"],["вежливый","odobli"],["грубый","qo'pol"],["терпеливый","sabrli"],["нервный","asabiy"],["спокойный","tinch"],["уверенный","ishonchli"],["скромный","kamtar"],["гордый","mag'rur"],["щедрый","saxiy"],["жадный","baxil"],["вкусный","mazali"],["невкусный","mazasiz"],["сладкий","shirin"],["горький","achchiq"],["солёный","sho'r"],["кислый","nordon"],["острый","achchiq (achchiq-tundir)"],["свежий","yangi"],["испорченный","buzilgan"],["жирный","yog'li"],["дорогой","qimmat"],["дешёвый","arzon"],["богатый","boy"],["бедный","kambag'al"],["выгодный","foydali"],["убыточный","zararli"],["экономный","tejamkor"],["расточительный","isrofgar"],["доступный","qulay"],["недоступный","qulay emas"],["быстрый","tez"],["медленный","sekin"],["трудный","qiyin"],["простой","oddiy"],["сложный","murakkab"],["срочный","shoshilinch"],["неторопливый","shoshilmas"],["удобный","qulay"],["неудобный","noqulay"],["внезапный","to'satdan"],["близкий","yaqin"],["далёкий","uzoq"],["левый","chap"],["правый","o'ng"],["верхний","yuqori"],["нижний","quyi"],["передний","oldingi"],["задний","orqadagi"],["внутренний","ichki"],["внешний","tashqi"],["здоровый","sog'lom"],["больной","kasal"],["живой","tirik"],["мёртвый","o'lik"],["сильный","kuchli"],["слабый","zaif"],["активный","faol"],["уставший","charchagan"],["бодрый","tetik"],["сонный","uyquchan"],["известный","mashhur"],["знакомый","tanish"],["незнакомый","notanish"],["популярный","ommabop"],["важный","muhim"],["главный","asosiy"],["обычный","odatiy"],["особенный","alohida"],["общий","umumiy"],["личный","shaxsiy"],["деревянный","yog'ochdan"],["металлический","metall"],["стеклянный","shishadan"],["каменный","toshdan"],["бумажный","qog'ozdan"],["кожаный","teridan"],["пластиковый","plastik"],["шерстяной","jundan"],["золотой","oltin"],["серебряный","kumush"],["интересный","qiziqarli"],["скучный","zerikarli"],["полезный","foydali"],["вредный","zararli"],["опасный","xavfli"],["безопасный","xavfsiz"],["правильный","to'g'ri"],["неправильный","noto'g'ri"],["возможный","mumkin"],["невозможный","mumkin emas"]],"7":[["хорошо","yaxshi"],["плохо","yomon"],["страшно","qo'rqinchli"],["грустно","g'amgin"],["трудно","qiyin"],["легко","oson"],["весело","quvnoq"],["скучно","zerikarli"],["интересно","qiziqarli"],["холодно","sovuq"],["жарко","issiq"],["тепло","iliq"],["прохладно","salqin"],["душно","dim"],["сыро","nam"],["темно","qorong'i"],["светло","yorug'"],["тихо","jim"],["шумно","shovqinli"],["тесно","tor"],["просторно","keng"],["удобно","qulay"],["неудобно","noqulay"],["больно","og'riqli"],["приятно","yoqimli"],["неприятно","yoqimsiz"],["тяжело","og'ir"],["сложно","murakkab"],["просто","oson"],["стыдно","uyat"],["обидно","alam qiladi"],["жалко","achinarli"],["смешно","kulgili"],["тревожно","xavotirli"],["спокойно","tinch"],["неловко","noqulay (qiyin ahvolda)"],["одиноко","yolg'iz"],["радостно","quvonchli"],["тоскливо","sog'inchli"],["противно","jirkanch"],["любопытно","qiziq"],["досадно","achinarli"],["совестно","vijdon azobi"],["волнительно","hayajonli"],["понятно","tushunarli"],["непонятно","tushunarsiz"],["ясно","ravshan"],["неясно","noaniq"],["знакомо","tanish"],["незнакомо","notanish"],["важно","muhim"],["безразлично","befarq"],["голодно","och"],["дурно","bosh aylanadi"],["тошно","ko'ngil ayniydi"],["быстро","tez"],["медленно","sekin"],["громко","baland ovozda"],["красиво","chiroyli"],["некрасиво","xunuk"],["чисто","toza"],["грязно","iflos"],["аккуратно","ozoda"],["ярко","yorqin"],["близко","yaqin"],["далеко","uzoq"],["высоко","baland"],["низко","past"],["широко","keng"],["узко","tor"],["длинно","uzun"],["коротко","qisqa"],["давно","ancha oldin"],["недавно","yaqinda"],["рано","erta"],["поздно","kech"],["всегда","doim"],["иногда","ba'zan"],["никогда","hech qachon"],["часто","tez-tez"],["редко","kamdan-kam"],["снова","yana"],["опять","yana"],["уже","allaqachon"],["ещё","hali"],["сейчас","hozir"],["потом","keyin"],["вместе","birga"],["отдельно","alohida"],["вежливо","odobli"],["честно","halol"],["смело","jasurona"],["гордо","mag'rurona"],["щедро","saxiylik bilan"],["жадно","baxillik bilan"],["дорого","qimmat"],["дёшево","arzon"],["точно","aniq"],["вдруг","to'satdan"],["очень","juda"]],"8":[["выше","balandroq"],["ниже","pastroq"],["короче","qisqaroq"],["шире","kengroq"],["уже","torroq"],["толще","qalinroq"],["тоньше","yupqaroq"],["легче","yengilroq"],["мягче","yumshoqroq"],["твёрже","qattiqroq"],["глаже","silliqroq"],["гибче","egiluvchanroq"],["жёстче","qattiqroq"],["крепче","mustahkamroq"],["хрупче","mo'rtroq"],["суше","quruqroq"],["старше","kattaroq (yoshda)"],["моложе","yoshroq"],["раньше","ertaroq"],["позже","kechroq"],["чище","tozaroq"],["ярче","yorqinroq"],["слаще","shirinroq"],["горче","achchiqroq"],["дороже","qimmatroq"],["дешевле","arzonroq"],["богаче","boyroq"],["проще","oddiyroq"],["ближе","yaqinroq"],["дальше","uzoqroq"],["больше","kattaroq"],["меньше","kichikroq"],["лучше","yaxshiroq"],["хуже","yomonroq"],["длиннее","uzunroq"],["тяжелее","og'irroq"],["горячее","issiqroq"],["холоднее","sovuqroq"],["теплее","iliqroq"],["прохладнее","salqinroq"],["мокрее","ho'lroq"],["влажнее","namroq"],["новее","yangiroq"],["современнее","zamonaviyroq"],["красивее","chiroyliroq"],["некрасивее","xunukroq"],["грязнее","iflosroq"],["аккуратнее","ozodaroq"],["небрежнее","beparvoroq"],["тусклее","xiraroq"],["светлее","yorug'roq"],["темнее","qorong'iroq"],["добрее","mehribonroq"],["злее","yovuzroq"],["умнее","aqlliroq"],["глупее","ahmoqroq"],["веселее","quvnoqroq"],["грустнее","g'amginroq"],["смелее","jasurroq"],["трусливее","qo'rqoqroq"],["честнее","halolroq"],["ленивее","dangasaroq"],["вежливее","odobliroq"],["грубее","qo'polroq"],["терпеливее","sabrliroq"],["нервнее","asabiyroq"],["спокойнее","tinchroq"],["увереннее","ishonchliroq"],["скромнее","kamtarroq"],["щедрее","saxiyroq"],["жаднее","baxilroq"],["вкуснее","mazaliroq"],["солёнее","sho'rroq"],["кислее","nordonroq"],["острее","achchiqroq"],["свежее","yangiroq"],["жирнее","yog'liroq"],["беднее","kambag'alroq"],["выгоднее","foydaliroq"],["экономнее","tejamkorroq"],["доступнее","qulayroq"],["быстрее","tezroq"],["медленнее","sekinroq"],["труднее","qiyinroq"],["сложнее","murakkabroq"],["удобнее","qulayroq"],["неудобнее","noqulayroq"],["здоровее","sog'lomroq"],["сильнее","kuchliroq"],["слабее","zaifroq"],["активнее","faolroq"],["бодрее","tetikroq"],["известнее","mashhurroq"],["популярнее","ommaboproq"],["важнее","muhimroq"],["интереснее","qiziqarliroq"],["скучнее","zerikarliroq"],["полезнее","foydaliroq"],["вреднее","zararliroq"],["опаснее","xavfliroq"],["безопаснее","xavfsizroq"],["правильнее","to'g'riroq"]]};
+const norm = s => s.toLowerCase().replace(/ё/g, "е").replace(/[.,!?…;:"«»()]/g, " ").replace(/\s+/g, " ").trim();
+// ---------- Озвучка (встроенный голос браузера) ----------
+let ruVoice = null, voicesLoaded = false, audioOn = true, currentSpeak = "";
+try { audioOn = localStorage.getItem("slovar_audio") !== "off"; } catch (e) {}
+function speechUsable() {
+  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return false;
+  return !(voicesLoaded && !ruVoice); // голоса загрузились, но русского нет — прячем кнопки
+}
+function refreshVoices() {
+  try {
+    const vs = speechSynthesis.getVoices();
+    if (vs.length) { voicesLoaded = true; ruVoice = vs.find(v => /^ru/i.test(v.lang.replace("_","-"))) || null; }
+  } catch (e) {}
+  document.getElementById("audio-row").hidden = !speechUsable();
+  document.getElementById("audio-toggle").checked = audioOn;
+  document.getElementById("dnote").hidden = speechUsable();
+  if (window.dictReady) dictRender();
+}
+function speak(text, force, btn) {
+  if (!speechUsable() || !(audioOn || force) || !text) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/\.\.\./g, " "));
+    u.lang = "ru-RU"; u.rate = 0.85;
+    if (ruVoice) u.voice = ruVoice;
+    if (btn) { btn.classList.add("on"); u.onend = u.onerror = () => btn.classList.remove("on"); }
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+if ("speechSynthesis" in window) {
+  speechSynthesis.addEventListener && speechSynthesis.addEventListener("voiceschanged", refreshVoices);
+}
+document.getElementById("audio-toggle").addEventListener("change", e => {
+  audioOn = e.target.checked;
+  try { localStorage.setItem("slovar_audio", audioOn ? "on" : "off"); } catch (err) {}
+});
+document.getElementById("speak-btn").addEventListener("click", () => speak(currentSpeak, true));
+document.getElementById("mistakes-body").addEventListener("click", e => {
+  const b = e.target.closest(".mini-speak");
+  if (b) speak(b.dataset.ru, true);
+});
+refreshVoices();
+
+let points = 0, streak = 0, bestStreak = 0, lastResult = null;
+const PTS = { choice: 10, write: 15, streakBonus: 10, streakEvery: 5 };
+function updateBadge() { document.getElementById("score-badge").textContent = "⭐ " + points + "  ✓ " + score; }
+function award(ok, per) {
+  const msg = document.getElementById("streak-msg");
+  msg.textContent = "";
+  if (!ok) { streak = 0; return; }
+  streak++; bestStreak = Math.max(bestStreak, streak); points += per;
+  if (streak % PTS.streakEvery === 0) { points += PTS.streakBonus; msg.textContent = "🔥 " + streak + " подряд! +" + PTS.streakBonus + " бонус"; }
+}
+function resetRun() { score = 0; mistakes = []; points = 0; streak = 0; bestStreak = 0; }
+const modeLabel = m => m === "write" ? "✍️ Письменно" : m === "ru-uz" ? "🎮 Игра RU→UZ" : "🎮 Игра UZ→RU";
+function getName() { return (document.getElementById("student-name").value || "").trim(); }
+try { document.getElementById("student-name").value = localStorage.getItem("slovar_name") || ""; } catch (e) {}
+function loadHistory() { try { return JSON.parse(localStorage.getItem("slovar_history") || "[]"); } catch (e) { return []; } }
+function saveHistory(h) { try { localStorage.setItem("slovar_history", JSON.stringify(h.slice(-300))); } catch (e) {} }
+
+let selectedLesson = null;
+let selectedMode = "ru-uz";
+let quizWords = [];
+let currentIndex = 0;
+let score = 0;
+let mistakes = [];
+
+const lessonGrid = document.getElementById("lesson-grid");
+Object.keys(VOCAB).sort((a,b)=>a-b).forEach(num => {
+  const btn = document.createElement("div");
+  btn.className = "lesson-btn";
+  btn.dataset.lesson = num;
+  btn.innerHTML = `Урок ${num}<span class="count">${VOCAB[num].length} слов</span>`;
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".lesson-btn").forEach(b=>b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedLesson = num;
+  });
+  lessonGrid.appendChild(btn);
+});
+
+document.querySelectorAll(".mode-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedMode = btn.dataset.mode;
+  });
+});
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i=a.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+document.getElementById("start-btn").addEventListener("click", () => {
+  if (!getName()) { alert("Сначала напиши своё имя."); document.getElementById("student-name").focus(); return; }
+  try { localStorage.setItem("slovar_name", getName()); } catch (e) {}
+  if (!selectedLesson) { alert("Выбери урок!"); return; }
+  const pool = VOCAB[selectedLesson];
+  const count = Math.min(10, pool.length);
+  quizWords = shuffle(pool).slice(0, count);
+  currentIndex = 0;
+  resetRun();
+  document.getElementById("setup-card").classList.add("hidden");
+  document.getElementById("result-card").classList.remove("active");
+  document.getElementById("quiz-card").classList.add("active");
+  showQuestion();
+});
+
+function showQuestion() {
+  const pool = VOCAB[selectedLesson];
+  const pair = quizWords[currentIndex];
+  const qIdx = selectedMode === "ru-uz" ? 0 : 1;
+  const aIdx = selectedMode === "ru-uz" ? 1 : 0;
+
+  document.getElementById("word-lang").textContent = selectedMode === "ru-uz" ? "Русский" : "O'zbekcha";
+  document.getElementById("word-main").textContent = pair[qIdx];
+  document.getElementById("streak-msg").textContent = "";
+  document.getElementById("progress-count").textContent = `${currentIndex+1}/${quizWords.length}`;
+  document.getElementById("progress-fill").style.width = (currentIndex/quizWords.length*100) + "%";
+  updateBadge();
+
+  // варианты без повторов; слова с тем же вопросом (напр. «oy» = месяц/луна) не берём как неверные
+  const seen = new Set([pair[aIdx]]);
+  const distractors = [];
+  for (const p of shuffle(pool)) {
+    if (seen.has(p[aIdx]) || p[qIdx] === pair[qIdx]) continue;
+    seen.add(p[aIdx]); distractors.push(p[aIdx]);
+    if (distractors.length === 3) break;
+  }
+  const options = shuffle([pair[aIdx], ...distractors]);
+
+  // озвучка: в режиме RU→UZ звучит вопрос, в UZ→RU — правильный ответ после выбора
+  currentSpeak = pair[0];
+  const speakBtn = document.getElementById("speak-btn");
+  speakBtn.hidden = !(speechUsable() && selectedMode === "ru-uz");
+  if (selectedMode === "ru-uz") speak(currentSpeak);
+
+  const optsEl = document.getElementById("options");
+  optsEl.innerHTML = "";
+  const nextBtn = document.getElementById("next-btn");
+  nextBtn.classList.remove("show");
+  const writeArea = document.getElementById("write-area");
+  writeArea.hidden = selectedMode !== "write";
+  if (selectedMode === "write") {
+    const accepted = pool.filter(p => p[1] === pair[1]).map(p => p[0]);      // все допустимые переводы
+    const acceptedNorm = new Set(accepted.map(norm));
+    const input = document.getElementById("write-input"), chk = document.getElementById("check-btn"),
+          skip = document.getElementById("skip-btn"), fb = document.getElementById("write-feedback");
+    input.value = ""; input.disabled = false; chk.hidden = false; skip.hidden = false; fb.innerHTML = "";
+    let done = false;
+    const finish = (typed) => {
+      if (done) return; done = true;
+      const ok = typed !== null && acceptedNorm.has(norm(typed));
+      input.disabled = true; chk.hidden = true; skip.hidden = true;
+      if (ok) { score++; award(true, PTS.write); fb.innerHTML = '<div class="fb ok">✓ Верно!</div>'; }
+      else {
+        award(false);
+        mistakes.push({ q: pair[qIdx], correct: accepted.join(" / "), picked: typed === null ? "не знаю" : typed, ru: pair[0] });
+        fb.innerHTML = '<div class="fb bad">✗ Правильно: <b>' + esc(accepted.join(" / ")) + '</b></div>';
+      }
+      updateBadge();
+      speakBtn.hidden = !speechUsable(); speak(pair[0]);
+      nextBtn.classList.add("show");
+    };
+    chk.onclick = () => { if (!input.value.trim()) { input.focus(); return; } finish(input.value); };
+    skip.onclick = () => finish(null);
+    input.onkeydown = e => { if (e.key === "Enter") chk.onclick(); };
+    optsEl.innerHTML = "";
+    setTimeout(() => input.focus(), 50);
+    return;
+  }
+
+  options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "opt-btn";
+    btn.textContent = opt;
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".opt-btn").forEach(b => b.disabled = true);
+      if (opt === pair[aIdx]) {
+        btn.classList.add("correct");
+        score++; award(true, PTS.choice);
+      } else {
+        btn.classList.add("wrong"); award(false);
+        mistakes.push({ q: pair[qIdx], correct: pair[aIdx], picked: opt, ru: pair[0] });
+        document.querySelectorAll(".opt-btn").forEach(b => { if (b.textContent === pair[aIdx]) b.classList.add("correct"); });
+      }
+      updateBadge();
+      if (selectedMode === "uz-ru") { speakBtn.hidden = !speechUsable(); speak(currentSpeak); }
+      nextBtn.classList.add("show");
+    });
+    optsEl.appendChild(btn);
+  });
+}
+
+document.getElementById("next-btn").addEventListener("click", () => {
+  currentIndex++;
+  if (currentIndex >= quizWords.length) {
+    showResult();
+  } else {
+    showQuestion();
+  }
+});
+
+function showResult() {
+  document.getElementById("quiz-card").classList.remove("active");
+  document.getElementById("result-card").classList.add("active");
+  const pct = Math.round(score/quizWords.length*100);
+  document.getElementById("result-score").textContent = `${score}/${quizWords.length}`;
+  let emoji = "🎉", label = "Отличный результат!";
+  if (pct < 50) { emoji = "💪"; label = "Продолжай заниматься — получится!"; }
+  else if (pct < 80) { emoji = "👍"; label = "Хорошо, но есть куда расти!"; }
+  document.getElementById("result-emoji").textContent = emoji;
+  document.getElementById("result-label").textContent = label;
+  document.getElementById("result-points").textContent = "⭐ " + points + " баллов · лучшая серия: " + bestStreak;
+  document.getElementById("send-fallback").hidden = true;
+  lastResult = { name: getName(), mode: selectedMode, book: 1, lesson: selectedLesson, correct: score, total: quizWords.length,
+                 points, best: bestStreak, date: new Date().toISOString(),
+                 mistakes: mistakes.map(m => ({ q: m.q, a: m.correct, picked: m.picked })) };
+  const h = loadHistory(); h.push(lastResult); saveHistory(h);
+
+  const mistakesList = document.getElementById("mistakes-list");
+  if (mistakes.length > 0) {
+    mistakesList.style.display = "block";
+    document.getElementById("mistakes-body").innerHTML = mistakes.map(m =>
+      `<div class="mistake-item">${m.q} — <b>${m.correct}</b> (ответил: ${esc(m.picked)})${speechUsable() ? ` <button class="mini-speak" data-ru="${m.ru}" aria-label="Послушать">🔊</button>` : ""}</div>`
+    ).join("");
+  } else {
+    mistakesList.style.display = "none";
+  }
+}
+
+document.getElementById("retry-btn").addEventListener("click", () => {
+  document.getElementById("result-card").classList.remove("active");
+  document.getElementById("quiz-card").classList.add("active");
+  quizWords = shuffle(VOCAB[selectedLesson]).slice(0, Math.min(10, VOCAB[selectedLesson].length));
+  currentIndex = 0; resetRun();
+  showQuestion();
+});
+
+document.getElementById("back-btn").addEventListener("click", () => {
+  document.getElementById("result-card").classList.remove("active");
+  document.getElementById("setup-card").classList.remove("hidden");
+});
+
+
+// ---------- Словарь ----------
+let dLesson = "all", dQuery = "";
+const dChips = document.getElementById("chips");
+[["all","Все"], ...Object.keys(VOCAB).sort((a,b)=>a-b).map(k => [k, "Урок "+k])].forEach(([k,label]) => {
+  const b = document.createElement("button");
+  b.className = "chip" + (k==="all" ? " sel" : ""); b.textContent = label; b.dataset.k = k;
+  b.onclick = () => { dLesson = k; document.querySelectorAll(".chip").forEach(c => c.classList.toggle("sel", c===b)); dictRender(); };
+  dChips.appendChild(b);
+});
+document.getElementById("q").addEventListener("input", e => { dQuery = e.target.value.trim().toLowerCase().replace(/[’`ʻʼ]/g,"'"); dictRender(); });
+function esc(s) { return s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function dictRender() {
+  const keys = dLesson === "all" ? Object.keys(VOCAB).sort((a,b)=>a-b) : [dLesson];
+  let items = [];
+  keys.forEach(k => VOCAB[k].forEach(p => items.push(p)));
+  if (dQuery) items = items.filter(p => p[0].toLowerCase().includes(dQuery) || p[1].toLowerCase().replace(/[’`ʻʼ]/g,"'").includes(dQuery));
+  else if (dLesson === "all") items = items.slice().sort((a,b) => a[0].localeCompare(b[0], "ru"));
+  document.getElementById("info").textContent = items.length + " слов";
+  document.getElementById("play-lesson").hidden = dLesson === "all";
+  const list = document.getElementById("list");
+  if (!items.length) { list.innerHTML = '<div class="empty">Ничего не найдено</div>'; return; }
+  const can = speechUsable();
+  list.innerHTML = items.map(p => `<div class="row"><div class="words"><div class="ru">${esc(p[0])}</div><div class="uz">${esc(p[1])}</div></div>${can ? `<button class="spk" data-ru="${esc(p[0])}" aria-label="Послушать">🔊</button>` : ""}</div>`).join("");
+}
+document.getElementById("list").addEventListener("click", e => {
+  const b = e.target.closest(".spk"); if (b) speak(b.dataset.ru, true, b);
+});
+
+// ---------- Отчёт учителю ----------
+function fmtDate(iso) { try { return new Date(iso).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }); } catch (e) { return iso; } }
+function buildReport(r) {
+  const lines = ["📚 Guli | Rus tili — Словарь", "Ученик: " + r.name, "Режим: " + modeLabel(r.mode),
+    "Книга " + r.book + ", урок " + r.lesson, "Верно: " + r.correct + "/" + r.total,
+    "Баллы: " + r.points + " (лучшая серия: " + r.best + ")", "Дата: " + fmtDate(r.date)];
+  if (r.mistakes && r.mistakes.length) lines.push("Ошибки: " + r.mistakes.map(m => m.q + " — " + m.a + " (ответил: " + m.picked + ")").join("; "));
+  return lines.join("\n");
+}
+document.getElementById("send-btn").addEventListener("click", async () => {
+  if (!lastResult) return;
+  const text = buildReport(lastResult);
+  if (navigator.share) {
+    try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(text); } catch (e) {}
+  document.getElementById("send-text").value = text;
+  document.getElementById("send-tg").href = "https://t.me/share/url?url=%20&text=" + encodeURIComponent(text);
+  document.getElementById("send-wa").href = "https://wa.me/?text=" + encodeURIComponent(text);
+  document.getElementById("send-fallback").hidden = false;
+});
+
+// ---------- Результаты ----------
+function renderResults() {
+  const h = loadHistory();
+  const st = {};
+  h.forEach(r => {
+    const k = r.name.trim().toLowerCase(); const o = st[k] || (st[k] = { name: r.name, game: 0, write: 0, points: 0, runs: 0 });
+    o.runs++; o.points += r.points; if (r.mode === "write") o.write++; else o.game++;
+  });
+  const rows = Object.values(st).sort((a, b) => b.points - a.points);
+  document.getElementById("res-students").innerHTML = rows.length
+    ? '<table class="res"><tr><th>Ученик</th><th>🎮</th><th>✍️</th><th>⭐ Баллы</th></tr>' + rows.map(o => `<tr><td>${esc(o.name)}</td><td>${o.game}</td><td>${o.write}</td><td><b>${o.points}</b></td></tr>`).join("") + "</table>"
+    : '<div class="empty">Пока нет результатов</div>';
+  document.getElementById("res-attempts").innerHTML = h.length
+    ? '<table class="res"><tr><th>Дата</th><th>Ученик</th><th>Режим</th><th>Урок</th><th>Верно</th><th>⭐</th></tr>' + h.slice().reverse().map(r => `<tr><td>${esc(fmtDate(r.date))}</td><td>${esc(r.name)}</td><td>${r.mode === "write" ? "✍️" : "🎮"}</td><td>${r.lesson}</td><td>${r.correct}/${r.total}</td><td>${r.points}</td></tr>`).join("") + "</table>"
+    : '<div class="empty">—</div>';
+}
+document.getElementById("res-copy").addEventListener("click", async e => {
+  const h = loadHistory();
+  const text = "Ученик\tРежим\tКнига\tУрок\tВерно\tВсего\tБаллы\tДата\n" + h.map(r => [r.name, modeLabel(r.mode), r.book, r.lesson, r.correct, r.total, r.points, fmtDate(r.date)].join("\t")).join("\n");
+  try { await navigator.clipboard.writeText(text); e.target.textContent = "✓ Скопировано"; } catch (err) { e.target.textContent = "Не удалось скопировать"; }
+  setTimeout(() => { e.target.textContent = "📋 Скопировать всё"; }, 2000);
+});
+document.getElementById("res-clear").addEventListener("click", () => {
+  if (confirm("Удалить все результаты на этом устройстве?")) { saveHistory([]); try { localStorage.removeItem("slovar_history"); } catch (e) {} renderResults(); }
+});
+
+// ---------- Вкладки ----------
+function showTab(name) {
+  document.getElementById("view-dict").hidden = name !== "dict";
+  document.getElementById("view-game").hidden = name !== "game";
+  document.getElementById("view-results").hidden = name !== "results";
+  if (name === "results") renderResults();
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("sel", t.dataset.tab === name));
+  try { speechSynthesis.cancel(); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => showTab(t.dataset.tab)));
+document.getElementById("play-lesson").addEventListener("click", () => {
+  const btn = document.querySelector('.lesson-btn[data-lesson="' + dLesson + '"]');
+  if (btn) btn.click();
+  showTab("game");
+});
+window.dictReady = true;
+dictRender();
+
+</script>
+</body>
+</html>
